@@ -1,0 +1,71 @@
+const express = require("express");
+const app = express();
+app.use(express.json());
+
+// In-memory seat store
+let seats = {
+  1: { status: "available" },
+  2: { status: "available" },
+  3: { status: "available" },
+  4: { status: "available" },
+  5: { status: "available" },
+};
+
+// GET /seats - list all seats
+app.get("/seats", (req, res) => {
+  res.json(seats);
+});
+
+// POST /lock/:id - lock a seat temporarily
+app.post("/lock/:id", (req, res) => {
+  const seatId = req.params.id;
+
+  if (!seats[seatId]) {
+    return res.status(404).json({ message: "Seat not found" });
+  }
+
+  if (seats[seatId].status === "available") {
+    seats[seatId].status = "locked";
+
+    // auto release after 1 minute if not confirmed
+    setTimeout(() => {
+      if (seats[seatId].status === "locked") {
+        seats[seatId].status = "available";
+        console.log(Seat ${seatId} lock expired.);
+      }
+    }, 60 * 1000);
+
+    return res.json({
+      message: Seat ${seatId} locked successfully. Confirm within 1 minute.,
+    });
+  } else if (seats[seatId].status === "locked") {
+    return res.status(400).json({ message: Seat ${seatId} is already locked });
+  } else if (seats[seatId].status === "booked") {
+    return res
+      .status(400)
+      .json({ message: Seat ${seatId} is already booked });
+  }
+});
+
+// POST /confirm/:id - confirm booking
+app.post("/confirm/:id", (req, res) => {
+  const seatId = req.params.id;
+
+  if (!seats[seatId]) {
+    return res.status(404).json({ message: "Seat not found" });
+  }
+
+  if (seats[seatId].status === "locked") {
+    seats[seatId].status = "booked";
+    return res.json({ message: Seat ${seatId} booked successfully! });
+  } else {
+    return res
+      .status(400)
+      .json({ message: Seat ${seatId} is not locked and cannot be booked });
+  }
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(Server running at http://localhost:${PORT});
+});
